@@ -76,10 +76,10 @@
 
 以下是一些示例页面截图：
 
-![示例图1](https://mjj.aiofchina.com/assets/files/2025-01-09/1736458100-588829-image.png)
-![示例图2](https://mjj.aiofchina.com/assets/files/2025-01-09/1736458139-534633-image.png)
-![示例图3](https://mjj.aiofchina.com/assets/files/2025-01-09/1736458192-470743-image.png)
-![示例图4](https://mjj.aiofchina.com/assets/files/2025-01-09/1736458236-220279-image.png)
+![示例图1](https://github.com/Vincentkeio/cardscript/blob/main/1.png?raw=true)
+![示例图2](https://github.com/Vincentkeio/cardscript/blob/main/2.png?raw=true)
+![示例图3](https://github.com/Vincentkeio/cardscript/blob/main/3.png?raw=true)
+![示例图4](https://github.com/Vincentkeio/cardscript/blob/main/4.png?raw=true)
 
 ---
 
