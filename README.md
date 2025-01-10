@@ -1,5 +1,7 @@
 ## 🎉 Cardscript v0 发布
 
+演示站点：[http://card.aiofchina.com](http://card.aiofchina.com)
+
 **Cardscript** 是一个开源网站模板，旨在简化部署过程，适用于个人服务器。其主要特点包括：
 
 ### 🚀 主要功能
@@ -63,7 +65,5 @@
 访问我们的项目主页了解更多信息和最新动态：
 
 🔗 [https://github.com/Vincentkeio/cardscript](https://github.com/Vincentkeio/cardscript)
-
-演示站点：[http://card.aiofchina.com](http://card.aiofchina.com)
 
 ---
