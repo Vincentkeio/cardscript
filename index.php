@@ -867,20 +867,124 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
 
             // 分页逻辑
             let currentPage = 0;
-            const totalPages = <?php echo $totalPages; ?>;
-            const pages = document.querySelectorAll('.page');
-            const indicators = document.querySelectorAll('.indicator');
+            let totalPages = <?php echo $totalPages; ?>;
+            const ROWS = <?php echo (int)$rows; ?>;
+            const COLS = <?php echo (int)$cols; ?>;
+            const pagesEl = document.getElementById('pages');
+            const indicatorsEl = document.querySelector('.pagination-indicators');
+            const paginationEl = document.querySelector('.pagination');
 
-            // 更新分页指示器样式
             // 紧凑布局：窄屏或矮窗口（页面可滚动、卡片保底高度），与 CSS 断点保持一致
-            // 注意：拆成两次单个 matchMedia 调用，避免个别浏览器对逗号媒体查询列表支持不佳
+            // 注意：拆成多次单个 matchMedia 调用，避免个别浏览器对逗号媒体查询列表支持不佳
             function isMobileLayout() {
                 return window.matchMedia('(max-width: 767px)').matches
                     || window.matchMedia('(max-height: 560px)').matches;
             }
 
+            // 当前生效的列数，与 CSS 断点保持一致
+            function currentCols() {
+                if (window.matchMedia('(max-width: 767px)').matches) return 2;
+                if (window.matchMedia('(min-width: 1280px)').matches) return COLS;
+                if (window.matchMedia('(min-width: 992px)').matches) return Math.min(COLS, 4);
+                return Math.min(COLS, 3);
+            }
+
+            // ========== 响应式重分页 ==========
+            // 桌面布局沿用服务端分页（每页 rows×cols 张）；紧凑布局下列数变少，
+            // 每页改放 rows×当前列数 张，避免 25 张卡在 2 列下铺成 13 行。
+            var desktopSnapshot = null; // 桌面布局每页格子节点备份（切回桌面时恢复）
+            var layoutSig = null;       // 当前布局签名，未变化则不重建
+
+            function snapshotDesktop() {
+                desktopSnapshot = [];
+                pagesEl.querySelectorAll('.page').forEach(function(pg) {
+                    desktopSnapshot.push(Array.prototype.slice.call(pg.querySelectorAll('.card-cell')));
+                });
+            }
+
+            function makePageEl() {
+                var pg = document.createElement('div');
+                pg.className = 'page';
+                pg.setAttribute('data-page', '0');
+                pg.innerHTML = '<div class="card-container"><div class="card-grid"></div></div>';
+                return pg;
+            }
+
+            function makeEmptyCell() {
+                var cell = document.createElement('div');
+                cell.className = 'card-cell';
+                cell.innerHTML = '<div class="card empty-card"></div>';
+                return cell;
+            }
+
+            function fillPage(pgEl, cellNodes, perView) {
+                var grid = pgEl.querySelector('.card-grid');
+                while (grid.firstChild) grid.removeChild(grid.firstChild);
+                for (var i = 0; i < perView; i++) {
+                    grid.appendChild(i < cellNodes.length ? cellNodes[i] : makeEmptyCell());
+                }
+            }
+
+            function collectRealCells() {
+                var real = [];
+                pagesEl.querySelectorAll('.card-cell').forEach(function(c) {
+                    if (!c.querySelector('.empty-card')) real.push(c);
+                });
+                return real;
+            }
+
+            function applyLayout(perView, pageLists) {
+                var need = Math.max(1, pageLists.length);
+                var pageEls = Array.prototype.slice.call(pagesEl.querySelectorAll('.page'));
+                while (pageEls.length > need) {
+                    pagesEl.removeChild(pageEls.pop());
+                }
+                while (pageEls.length < need) {
+                    var pg = makePageEl();
+                    pagesEl.appendChild(pg);
+                    pageEls.push(pg);
+                }
+                for (var i = 0; i < need; i++) {
+                    fillPage(pageEls[i], pageLists[i], perView);
+                    pageEls[i].setAttribute('data-page', i);
+                }
+                totalPages = need;
+                rebuildIndicators();
+            }
+
+            function applyCompact() {
+                var perView = ROWS * currentCols();
+                var real = collectRealCells();
+                var lists = [];
+                for (var i = 0; i < real.length; i += perView) {
+                    lists.push(real.slice(i, i + perView));
+                }
+                if (!lists.length) lists.push([]);
+                applyLayout(perView, lists);
+            }
+
+            function restoreDesktop() {
+                applyLayout(ROWS * COLS, desktopSnapshot);
+            }
+
+            function rebuildIndicators() {
+                if (!indicatorsEl) return;
+                while (indicatorsEl.firstChild) indicatorsEl.removeChild(indicatorsEl.firstChild);
+                for (var i = 0; i < totalPages; i++) {
+                    var d = document.createElement('div');
+                    d.className = 'indicator' + (i === currentPage ? ' active' : '');
+                    d.setAttribute('data-page', i);
+                    indicatorsEl.appendChild(d);
+                }
+                // 只有一页时隐藏分页栏
+                if (paginationEl) {
+                    paginationEl.style.display = totalPages > 1 ? '' : 'none';
+                }
+            }
+
             function updatePagination() {
-                indicators.forEach(function(indicator, index) {
+                var inds = indicatorsEl ? indicatorsEl.querySelectorAll('.indicator') : [];
+                inds.forEach(function(indicator, index) {
                     if (index === currentPage) {
                         indicator.classList.add('active');
                     } else {
@@ -889,7 +993,7 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 });
                 // 桌面端：所有页绝对定位叠放，用 transform 横向滑动，active 类不参与显示
                 // 紧凑布局：仅当前页 display:block；CSS 已将 transform 置 none，旧位移不会残留
-                pages.forEach(function(page, index) {
+                pagesEl.querySelectorAll('.page').forEach(function(page, index) {
                     if (isMobileLayout()) {
                         if (index === currentPage) {
                             page.classList.add('active');
@@ -902,13 +1006,38 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 });
             }
 
-            // 监听分页指示器点击事件
-            indicators.forEach(function(indicator) {
-                indicator.addEventListener('click', function() {
-                    currentPage = parseInt(this.getAttribute('data-page'));
-                    updatePagination();
+            function syncLayout() {
+                var sig = isMobileLayout() ? ('compact:' + currentCols()) : 'desktop';
+                if (sig !== layoutSig) {
+                    layoutSig = sig;
+                    if (sig === 'desktop') {
+                        restoreDesktop();
+                    } else {
+                        applyCompact();
+                    }
+                    if (currentPage > totalPages - 1) {
+                        currentPage = Math.max(0, totalPages - 1);
+                    }
+                }
+                updatePagination();
+            }
+
+            // 监听分页指示器点击（事件委托，重建指示器后依然有效）
+            if (paginationEl) {
+                paginationEl.addEventListener('click', function(e) {
+                    var target = e.target;
+                    while (target && target !== paginationEl &&
+                           !(target.classList && target.classList.contains('indicator'))) {
+                        target = target.parentNode;
+                    }
+                    if (!target || target === paginationEl) return;
+                    var p = parseInt(target.getAttribute('data-page'), 10);
+                    if (!isNaN(p)) {
+                        currentPage = p;
+                        updatePagination();
+                    }
                 });
-            });
+            }
 
             // 电脑端滚轮翻页（紧凑布局下页面自身可滚动，滚轮让位给滚动）
             window.addEventListener('wheel', function(e) {
@@ -924,46 +1053,48 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 updatePagination();
             });
 
-            // 窗口尺寸跨越断档时重新同步分页与布局
+            // 窗口尺寸跨越断档时重新分页并同步布局
             let resizeTimer = null;
             window.addEventListener('resize', function() {
                 if (resizeTimer) clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(updatePagination, 150);
+                resizeTimer = setTimeout(syncLayout, 150);
             });
 
-            // 手机端滑动翻页
+            // 手机端滑动翻页（事件委托，重建分页后依然有效）
             let startX = 0;
             let isScrolling = false;
 
-            pages.forEach(function(page) {
-                page.addEventListener('touchstart', function(e) {
-                    startX = e.touches[0].clientX;
-                    isScrolling = false;
-                });
-
-                page.addEventListener('touchmove', function(e) {
-                    let currentX = e.touches[0].clientX;
-                    let diff = currentX - startX;
-                    if (Math.abs(diff) > 10) {
-                        isScrolling = true;
-                    }
-                });
-
-                page.addEventListener('touchend', function(e) {
-                    if (isScrolling) {
-                        if (startX - e.changedTouches[0].clientX > 50) {
-                            if (currentPage < totalPages - 1) {
-                                currentPage++;
-                            }
-                        } else if (e.changedTouches[0].clientX - startX > 50) {
-                            if (currentPage > 0) {
-                                currentPage--;
-                            }
-                        }
-                        updatePagination();
-                    }
-                });
+            pagesEl.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+                isScrolling = false;
             });
+
+            pagesEl.addEventListener('touchmove', function(e) {
+                let currentX = e.touches[0].clientX;
+                let diff = currentX - startX;
+                if (Math.abs(diff) > 10) {
+                    isScrolling = true;
+                }
+            });
+
+            pagesEl.addEventListener('touchend', function(e) {
+                if (isScrolling) {
+                    if (startX - e.changedTouches[0].clientX > 50) {
+                        if (currentPage < totalPages - 1) {
+                            currentPage++;
+                        }
+                    } else if (e.changedTouches[0].clientX - startX > 50) {
+                        if (currentPage > 0) {
+                            currentPage--;
+                        }
+                    }
+                    updatePagination();
+                }
+            });
+
+            // 初始化：记录桌面分页，按当前布局重建
+            snapshotDesktop();
+            syncLayout();
         });
     </script>
 </body>
