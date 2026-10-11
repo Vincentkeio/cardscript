@@ -588,7 +588,7 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
 
     <!-- 页尾 -->
     <div class="footer">
-        Cardscript v0 Powered by VKbeast
+        Cardscript v1.0 Powered by VKbeast
     </div>
 
     <!-- 自定义复制成功提示框 -->

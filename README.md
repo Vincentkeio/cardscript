@@ -1,8 +1,8 @@
-## 🎉 **Cardscript v0 发布**
+## 🎉 **Cardscript v1.0 发布**
 
-🚀 **[演示站点](http://card.aiofchina.com)**
+🚀 **[演示站点](https://card.pencilai.top)**
 
-**Cardscript v0** 是一款轻量化、易部署的开源网站模板，能够在个人服务器上快速上线。无论您是新手还是有经验的开发者，都能轻松使用并进行定制。
+**Cardscript v1.0** 是一款轻量化、易部署的开源网站模板，能够在个人服务器上快速上线。无论您是新手还是有经验的开发者，都能轻松使用并进行定制。
 
 ### 🌐 部署环境
 
@@ -42,10 +42,10 @@
 
 ### 📦 获取与安装
 
-按照以下步骤在您的服务器上部署 **Cardscript v0**：
+按照以下步骤在您的服务器上部署 **Cardscript v1.0**：
 
 1. **下载压缩包**  
-   前往 [Releases](https://github.com/Vincentkeio/cardscript/releases) 页面下载最新的 `cardscript v0.zip` 文件。
+   前往 [Releases](https://github.com/Vincentkeio/cardscript/releases) 页面下载最新的 `cardscript v1.0.zip` 文件。
 
 2. **使用宝塔面板新建网站**  
    - 登录您的宝塔面板。
@@ -53,9 +53,9 @@
 
 3. **上传并解压压缩包**  
    - 进入新建网站的根目录。
-   - 上传 `cardscript v0.zip` 压缩包到根目录。
+   - 上传 `cardscript v1.0.zip` 压缩包到根目录。
    - 在根目录下解压压缩包。  
-   - **注意**：若解压后出现 `cardscript v0` 文件夹，请进入该文件夹，将所有内容剪切并粘贴回网站根目录，确保所有文件直接位于根目录中。
+   - **注意**：若解压后出现 `cardscript v1.0` 文件夹，请进入该文件夹，将所有内容剪切并粘贴回网站根目录，确保所有文件直接位于根目录中。
 
 4. **配置网站**  
    - 在浏览器中输入您的域名，打开 **Cardscript** 初始化页面。
@@ -109,12 +109,12 @@
    - 保存后首页自动按新排版铺满屏幕，无需改代码。
 
 4. **我安装完后，首页为什么是空的？**  
-   - 自 v0.1 起，全新安装会自动导入 `cards_seed.sql` 中的 41 张默认卡片，首页不再为空。
+   - 自 v1.0 起，全新安装会自动导入 `cards_seed.sql` 中的 41 张默认卡片，首页不再为空。
    - 若仍在初始化页面（提示输入数据库信息），请先按上文第 4-5 步创建数据库并完成初始化。
    - 如需增删卡片，登录管理员面板手动管理即可；清空全部卡片后刷新页面会再次导入默认卡片。
 
 ---
 
-🙏 感谢您使用 **Cardscript v0**！如有任何疑问或建议，欢迎在 [Issues](https://github.com/Vincentkeio/cardscript/issues) 中反馈。
+🙏 感谢您使用 **Cardscript v1.0**！如有任何疑问或建议，欢迎在 [Issues](https://github.com/Vincentkeio/cardscript/issues) 中反馈。
 
 ---
