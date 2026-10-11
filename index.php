@@ -479,6 +479,8 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 display: none;
                 height: auto;
                 padding: 10px;
+                /* 兜底：即使 JS 失效或旧标签页残留位移，紧凑布局下也不横向偏移 */
+                transform: none !important;
             }
             .page.active {
                 display: block;
@@ -491,14 +493,15 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
             .card {
                 height: 96px;
             }
-            /* 移动端按钮限小，保证两个按钮 + 两行标题在 96px 卡片内放得下 */
+            /* 移动端按钮随卡片宽度缩放，同时受 96px 卡片高度约束 */
             .info-icon, .copy-btn {
-                flex: 0 0 auto;
-                width: 30px;
-                height: 30px;
-                max-width: 30px;
-                max-height: 30px;
-                font-size: 13px;
+                flex: 1 1 auto;
+                width: auto;
+                min-width: 20px;
+                min-height: 20px;
+                max-width: min(34px, 16cqw);
+                max-height: min(34px, 16cqw);
+                font-size: clamp(10px, 5.5cqw, 15px);
                 border-radius: 7px;
             }
             .card-actions {
@@ -549,6 +552,8 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 position: relative;
                 display: none;
                 height: auto;
+                /* 兜底：即使 JS 失效或旧标签页残留位移，紧凑布局下也不横向偏移 */
+                transform: none !important;
             }
             .page.active {
                 display: block;
@@ -558,16 +563,17 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 height: auto;
             }
             .info-icon, .copy-btn {
-                flex: 0 0 auto;
-                width: 30px;
-                height: 30px;
-                max-width: 30px;
-                max-height: 30px;
-                font-size: 13px;
+                flex: 1 1 auto;
+                width: auto;
+                min-width: 20px;
+                min-height: 20px;
+                max-width: min(34px, 16cqw);
+                max-height: min(34px, 16cqw);
+                font-size: clamp(10px, 5.5cqw, 15px);
                 border-radius: 7px;
             }
             .card-actions {
-                gap: 4px;
+                gap: clamp(2px, 1.5cqw, 5px);
             }
         }
         /* 中等宽度桌面窗口收敛列数，保证文字不被挤压 */
@@ -867,8 +873,10 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
 
             // 更新分页指示器样式
             // 紧凑布局：窄屏或矮窗口（页面可滚动、卡片保底高度），与 CSS 断点保持一致
+            // 注意：拆成两次单个 matchMedia 调用，避免个别浏览器对逗号媒体查询列表支持不佳
             function isMobileLayout() {
-                return window.matchMedia('(max-width: 767px), (max-height: 560px)').matches;
+                return window.matchMedia('(max-width: 767px)').matches
+                    || window.matchMedia('(max-height: 560px)').matches;
             }
 
             function updatePagination() {
@@ -879,13 +887,16 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                         indicator.classList.remove('active');
                     }
                 });
-                // 更新页面位置：桌面端横向滑动，紧凑布局切换显示（避免绝对定位溢出遮挡分页栏）
+                // 桌面端：所有页绝对定位叠放，用 transform 横向滑动，active 类不参与显示
+                // 紧凑布局：仅当前页 display:block；CSS 已将 transform 置 none，旧位移不会残留
                 pages.forEach(function(page, index) {
                     if (isMobileLayout()) {
-                        page.style.transform = '';
-                        page.classList.toggle('active', index === currentPage);
+                        if (index === currentPage) {
+                            page.classList.add('active');
+                        } else {
+                            page.classList.remove('active');
+                        }
                     } else {
-                        page.classList.add('active');
                         page.style.transform = `translateX(${(index - currentPage) * 100}%)`;
                     }
                 });
