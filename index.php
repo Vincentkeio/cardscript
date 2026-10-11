@@ -288,11 +288,12 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
         }
         .card-body {
             display: flex;
-            flex-direction: column;
-            justify-content: center;
-            height: 100%;
+            flex-direction: row;
+            align-items: center;
+            flex: 1 1 auto;
+            min-height: 0;
             min-width: 0;
-            padding-left: clamp(4px, 1.2cqw, 10px);
+            gap: clamp(6px, 2cqw, 14px);
         }
         .card-title {
             color: #0f172a;
@@ -300,27 +301,29 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
             font-size: clamp(0.85em, 1.35vw, 1.25em);
             font-weight: 700;
             letter-spacing: 0.01em;
+            line-height: 1.4;
+            box-sizing: border-box;
+            flex: 1 1 auto;
+            min-width: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             text-align: left;
-            padding-left: 5px;
-            padding-right: calc(clamp(28px, 14cqw, 46px) + 12px);
-            width: 100%;
-            word-break: break-all;
+            overflow-wrap: anywhere;
+            word-break: normal;
         }
         .card-actions {
-            position: absolute;
-            right: clamp(5px, 3cqw, 14px);
-            top: 50%;
-            transform: translateY(-50%);
+            flex: 0 0 auto;
+            align-self: stretch;
             display: flex;
             flex-direction: column;
+            justify-content: center;
             gap: clamp(3px, 1.5cqw, 8px);
             z-index: 2;
         }
+        /* 按钮同时受卡片宽高约束：高度不足时随卡片高度缩小，避免溢出到卡片外 */
         .info-icon, .copy-btn {
             background: rgba(255, 255, 255, 0.72);
             backdrop-filter: blur(6px);
@@ -329,12 +332,14 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
             border-radius: clamp(6px, 2.5cqw, 11px);
             cursor: pointer;
             color: #475569;
-            width: 30px;
-            height: 30px;
-            width: clamp(28px, 14cqw, 46px);
-            height: clamp(28px, 14cqw, 46px);
-            font-size: 13px;
-            font-size: clamp(11px, 7cqw, 20px);
+            flex: 1 1 auto;
+            aspect-ratio: 1 / 1;
+            width: auto;
+            min-width: 20px;
+            min-height: 20px;
+            max-width: min(44px, 13cqw);
+            max-height: min(44px, 13cqw);
+            font-size: clamp(10px, 5.5cqw, 18px);
             padding: 0;
             display: flex;
             align-items: center;
@@ -470,8 +475,13 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 overflow: visible;
             }
             .page {
+                position: relative;
+                display: none;
                 height: auto;
                 padding: 10px;
+            }
+            .page.active {
+                display: block;
             }
             .card-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -480,6 +490,19 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
             }
             .card {
                 height: 96px;
+            }
+            /* 移动端按钮限小，保证两个按钮 + 两行标题在 96px 卡片内放得下 */
+            .info-icon, .copy-btn {
+                flex: 0 0 auto;
+                width: 30px;
+                height: 30px;
+                max-width: 30px;
+                max-height: 30px;
+                font-size: 13px;
+                border-radius: 7px;
+            }
+            .card-actions {
+                gap: 4px;
             }
             .full-info {
                 width: 90%;
@@ -511,6 +534,48 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 grid-template-columns: repeat(<?php echo max(2, min((int)$cols, 3)); ?>, minmax(0, 1fr));
             }
         }
+        /* 矮窗口（宽屏但高度不足，如 850x500）：页面改为可滚动，卡片保底高度，按钮限小，
+           避免卡片被压扁后按钮溢出到卡片外部 */
+        @media (min-width: 768px) and (max-height: 560px) {
+            body {
+                height: auto;
+                min-height: 100vh;
+                overflow: auto;
+            }
+            #pages {
+                overflow: visible;
+            }
+            .page {
+                position: relative;
+                display: none;
+                height: auto;
+            }
+            .page.active {
+                display: block;
+            }
+            .card-grid {
+                grid-auto-rows: minmax(96px, auto);
+                height: auto;
+            }
+            .info-icon, .copy-btn {
+                flex: 0 0 auto;
+                width: 30px;
+                height: 30px;
+                max-width: 30px;
+                max-height: 30px;
+                font-size: 13px;
+                border-radius: 7px;
+            }
+            .card-actions {
+                gap: 4px;
+            }
+        }
+        /* 中等宽度桌面窗口收敛列数，保证文字不被挤压 */
+        @media (min-width: 992px) and (max-width: 1279px) {
+            .card-grid {
+                grid-template-columns: repeat(<?php echo max(3, min((int)$cols, 4)); ?>, minmax(0, 1fr));
+            }
+        }
         /* 超宽屏适度限制内容宽度，保证卡片不过分拉伸 */
         @media (min-width: 1800px) {
             .page {
@@ -535,7 +600,7 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
     <!-- 分页内容 -->
     <div id="pages">
         <?php for ($page = 0; $page < $totalPages; $page++): ?>
-            <div class="page" data-page="<?php echo $page; ?>" style="transform: translateX(<?php echo $page * 100; ?>%);">
+                <div class="page<?php echo $page === 0 ? ' active' : ''; ?>" data-page="<?php echo $page; ?>" style="transform: translateX(<?php echo $page * 100; ?>%);">
                 <div class="card-container">
                     <?php
                     $start = $page * $perPage;
@@ -801,6 +866,11 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
             const indicators = document.querySelectorAll('.indicator');
 
             // 更新分页指示器样式
+            // 紧凑布局：窄屏或矮窗口（页面可滚动、卡片保底高度），与 CSS 断点保持一致
+            function isMobileLayout() {
+                return window.matchMedia('(max-width: 767px), (max-height: 560px)').matches;
+            }
+
             function updatePagination() {
                 indicators.forEach(function(indicator, index) {
                     if (index === currentPage) {
@@ -809,9 +879,15 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                         indicator.classList.remove('active');
                     }
                 });
-                // 更新页面位置
+                // 更新页面位置：桌面端横向滑动，紧凑布局切换显示（避免绝对定位溢出遮挡分页栏）
                 pages.forEach(function(page, index) {
-                    page.style.transform = `translateX(${(index - currentPage) * 100}%)`;
+                    if (isMobileLayout()) {
+                        page.style.transform = '';
+                        page.classList.toggle('active', index === currentPage);
+                    } else {
+                        page.classList.add('active');
+                        page.style.transform = `translateX(${(index - currentPage) * 100}%)`;
+                    }
                 });
             }
 
@@ -823,9 +899,10 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 });
             });
 
-            // 电脑端滚轮翻页
+            // 电脑端滚轮翻页（紧凑布局下页面自身可滚动，滚轮让位给滚动）
             window.addEventListener('wheel', function(e) {
                 if (totalPages <= 1) return; // 如果只有一页，不处理滚动
+                if (isMobileLayout()) return; // 紧凑布局：滚轮用于滚动页面
 
                 if (e.deltaY > 0 && currentPage < totalPages - 1) {
                     currentPage++;
@@ -834,6 +911,13 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
                 }
 
                 updatePagination();
+            });
+
+            // 窗口尺寸跨越断档时重新同步分页与布局
+            let resizeTimer = null;
+            window.addEventListener('resize', function() {
+                if (resizeTimer) clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(updatePagination, 150);
             });
 
             // 手机端滑动翻页
