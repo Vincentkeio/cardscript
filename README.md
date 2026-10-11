@@ -85,10 +85,7 @@
 
 以下是一些示例页面截图：
 
-![示例图1](https://github.com/Vincentkeio/cardscript/blob/main/1.png?raw=true)
-![示例图2](https://github.com/Vincentkeio/cardscript/blob/main/2.png?raw=true)
-![示例图3](https://github.com/Vincentkeio/cardscript/blob/main/3.png?raw=true)
-![示例图4](https://github.com/Vincentkeio/cardscript/blob/main/4.png?raw=true)
+<img width="1641" height="907" alt="image" src="https://github.com/user-attachments/assets/208b0de1-db9b-4e4e-873d-90d8130b7684" />
 
 ---
 
