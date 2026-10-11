@@ -319,6 +319,8 @@ $totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
             align-self: stretch;
             display: flex;
             flex-direction: column;
+            /* 关键：不要在横轴拉伸按钮，否则按钮被拉成细竖条、aspect-ratio 失效 */
+            align-items: center;
             justify-content: center;
             gap: clamp(3px, 1.5cqw, 8px);
             z-index: 2;
