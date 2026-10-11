@@ -86,4 +86,25 @@ if (isset($_POST['maintitle'])) {
     }
     $stmt->close();
 }
+
+// 处理排版设置更新（每页行数 × 每页列数）
+if (isset($_POST['rows_per_page']) || isset($_POST['cards_per_row'])) {
+    $rows = isset($_POST['rows_per_page']) ? (int)$_POST['rows_per_page'] : 0;
+    $cols = isset($_POST['cards_per_row']) ? (int)$_POST['cards_per_row'] : 0;
+    if ($rows < 1 || $rows > 8 || $cols < 1 || $cols > 8) {
+        echo json_encode(['success' => false, 'message' => '行数和列数需在 1-8 之间。']);
+        return;
+    }
+
+    $sql = "UPDATE settings SET rows_per_page = ?, cards_per_row = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $rows, $cols);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => '排版设置已更新。']);
+    } else {
+        echo json_encode(['success' => false, 'message' => '更新排版设置失败: ' . $stmt->error]);
+    }
+    $stmt->close();
+}
 ?>

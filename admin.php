@@ -26,6 +26,16 @@ if ($maintitle_query && $maintitle_query->num_rows > 0) {
     $maintitle_data = $maintitle_query->fetch_assoc();
     $maintitle = $maintitle_data['maintitle'];
 }
+
+// 获取当前排版设置（每页行数 × 每页列数）
+$cards_per_row = 4;
+$rows_per_page = 4;
+$layout_query = $conn->query("SELECT cards_per_row, rows_per_page FROM settings LIMIT 1");
+if ($layout_query && $layout_query->num_rows > 0) {
+    $layout_data = $layout_query->fetch_assoc();
+    if (!empty($layout_data['cards_per_row'])) { $cards_per_row = (int)$layout_data['cards_per_row']; }
+    if (!empty($layout_data['rows_per_page'])) { $rows_per_page = (int)$layout_data['rows_per_page']; }
+}
 ?>
 
 <!DOCTYPE html>
@@ -193,6 +203,9 @@ if ($maintitle_query && $maintitle_query->num_rows > 0) {
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="maintitle-tab" data-bs-toggle="tab" data-bs-target="#maintitle" type="button" role="tab" aria-controls="maintitle" aria-selected="false">主标题设置</button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="layout-tab" data-bs-toggle="tab" data-bs-target="#layout" type="button" role="tab" aria-controls="layout" aria-selected="false">排版设置</button>
+                    </li>
                 </ul>
                 <div class="tab-content mt-3" id="settingsTabsContent">
                     <div class="tab-pane fade show active" id="credentials" role="tabpanel" aria-labelledby="credentials-tab">
@@ -230,6 +243,22 @@ if ($maintitle_query && $maintitle_query->num_rows > 0) {
                             <div class="mb-3">
                                 <label for="maintitle" class="form-label">主标题</label>
                                 <input type="text" class="form-control" id="maintitle" name="maintitle" placeholder="请输入主标题" value="<?php echo htmlspecialchars($maintitle); ?>" required>
+                            </div>
+                            <button type="submit" class="btn btn-primary">保存更改</button>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="layout" role="tabpanel" aria-labelledby="layout-tab">
+                        <form id="layoutForm">
+                            <div class="mb-3">
+                                <label for="cards_per_row" class="form-label">每页列数（1-8）</label>
+                                <input type="number" class="form-control" id="cards_per_row" name="cards_per_row" min="1" max="8" placeholder="请输入每页列数" value="<?php echo $cards_per_row; ?>" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="rows_per_page" class="form-label">每页行数（1-8）</label>
+                                <input type="number" class="form-control" id="rows_per_page" name="rows_per_page" min="1" max="8" placeholder="请输入每页行数" value="<?php echo $rows_per_page; ?>" required>
+                            </div>
+                            <div class="form-text mb-3">
+                                每页显示 = 行数 × 列数 张卡片，首页按屏幕宽度自适应铺满；手机窄屏自动降为 2 列。
                             </div>
                             <button type="submit" class="btn btn-primary">保存更改</button>
                         </form>
@@ -414,6 +443,30 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     alert(response.message);
+                    location.reload(); // 刷新页面以更新标题
+                } else {
+                    alert(response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+                alert('请求失败，请稍后再试。');
+            }
+        });
+    });
+
+    // 修改排版设置逻辑（每页行数 × 每页列数）
+    $('#layoutForm').on('submit', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: 'update_settings.php',
+            type: 'POST',
+            data: $(this).serialize(),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    alert(response.message);
+                    location.reload();
                 } else {
                     alert(response.message);
                 }

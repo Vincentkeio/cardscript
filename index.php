@@ -80,11 +80,22 @@ if ($maintitle_query && $maintitle_query->num_rows > 0) {
     $maintitle = $maintitle_data['maintitle'];
 }
 
+// 排版设置（每页行数 × 每页列数，优先使用数据库设置，为空时用默认值）
+$settings_row = null;
+$settings_query = $conn->query("SELECT rows_per_page, cards_per_row FROM settings LIMIT 1");
+if ($settings_query && $settings_query->num_rows > 0) {
+    $settings_row = $settings_query->fetch_assoc();
+}
+$cols = (int)($settings_row['cards_per_row'] ?? 0);
+$rows = (int)($settings_row['rows_per_page'] ?? 0);
+if ($cols < 1 || $cols > 8) { $cols = 4; }  // 每页列数，限制 1-8
+if ($rows < 1 || $rows > 8) { $rows = 4; }  // 每页行数，限制 1-8
+
 // 分页逻辑
 $isMobile = strpos($_SERVER['HTTP_USER_AGENT'], 'Mobile') !== false;
-$perPage = $isMobile ? 8 : 16; // 手机端每页显示 8 张卡片，PC 端显示 16 张
+$perPage = $rows * $cols; // 每页卡片数 = 行数 × 列数
 $totalCards = count($cards); // 卡片总数
-$totalPages = ceil($totalCards / $perPage); // 总页数
+$totalPages = max(1, ceil($totalCards / $perPage)); // 总页数
 ?>
 
 <!DOCTYPE html>
@@ -111,25 +122,27 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
             background-position: center;
             background-repeat: no-repeat;
             min-height: 100vh;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
+            position: relative;
+            flex: 0 0 auto;
             z-index: 1000;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
+            padding: 14px 20px;
             background-color: rgba(0, 0, 0, 0.7);
         }
         .page-title {
-            position: absolute;
-            left: 50%;
-            transform: translateX(-50%);
+            position: static;
+            flex: 1;
+            text-align: center;
+            margin: 0 130px;
             color: #f0f0f0;
-            font-size: 2em;
+            font-size: clamp(1.1em, 2.2vw, 2em);
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
             white-space: nowrap;
@@ -153,52 +166,62 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
         }
         .ip-counter {
             position: fixed;
-            top: 20px;
-            left: 20px;
-            background: linear-gradient(to right, #6a11cb, #2575fc);
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-size: 16px;
-            color: #fff;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            animation: slideInLeft 1s ease-in-out, glow 2s infinite alternate;
+            top: 22px;
+            left: 24px;
             z-index: 1001;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 7px 16px 7px 13px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            backdrop-filter: blur(14px) saturate(160%);
+            -webkit-backdrop-filter: blur(14px) saturate(160%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.16);
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 13px;
+            font-weight: 400;
+            letter-spacing: 0.03em;
+            line-height: 1;
+            animation: ipFadeIn 0.6s ease both;
         }
-        @keyframes slideInLeft {
-            from {
-                transform: translateX(-100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+        .ip-counter .ip-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #4ade80;
+            box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.14);
         }
-        @keyframes glow {
-            from {
-                box-shadow: 0 0 10px rgba(106, 17, 203, 0.7), 0 0 20px rgba(37, 117, 252, 0.7);
-            }
-            to {
-                box-shadow: 0 0 20px rgba(106, 17, 203, 0.9), 0 0 30px rgba(37, 117, 252, 0.9);
-            }
+        .ip-counter .ip-label {
+            color: rgba(255, 255, 255, 0.62);
+            font-weight: 300;
+        }
+        .ip-counter .ip-value {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.02em;
+        }
+        @keyframes ipFadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: none; }
         }
         .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
+            position: relative;
+            flex: 0 0 auto;
             text-align: center;
             font-size: 7pt;
-            color: #ccc;
-            padding: 10px 0;
-            background-color: rgba(0, 0, 0, 0.8);
+            color: rgba(255, 255, 255, 0.55);
+            padding: 9px 0;
+            background-color: rgba(0, 0, 0, 0.55);
+            letter-spacing: 0.08em;
             z-index: 1000;
         }
         #pages {
             position: relative;
-            top: 100px;
+            flex: 1 1 auto;
+            min-height: 0;
             width: 100%;
-            height: calc(100vh - 100px);
             overflow: hidden;
         }
         .page {
@@ -207,90 +230,127 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
             left: 0;
             width: 100%;
             height: 100%;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
+            padding: clamp(14px, 2.8vh, 34px) clamp(10px, 2.5vw, 40px);
+            box-sizing: border-box;
             transition: transform 0.5s ease-in-out;
         }
         .card-container {
             background: transparent;
-            padding: 10px;
-            width: 90%;
-            max-width: 1200px;
+            width: 100%;
+            max-width: none;
             height: 100%;
             overflow: visible;
         }
-        .row {
-            display: flex;
-            flex-wrap: wrap;
-            margin-left: -10px !important;
-            margin-right: -10px !important;
-            margin-bottom: 10px !important;
-        }
-        .col-md-3, .col-6 {
-            width: 25%;
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(<?php echo (int)$cols; ?>, minmax(0, 1fr));
+            grid-auto-rows: minmax(0, 1fr);
+            gap: clamp(8px, 1.4vh, 16px) clamp(8px, 1.2vw, 18px);
+            width: 100%;
+            height: 100%;
             box-sizing: border-box;
-            padding: 0 10px !important;
+        }
+        .card-cell {
+            display: flex;
+            min-width: 0;
+            min-height: 0;
         }
         .card {
             position: relative;
-            background-color: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            padding: 10px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            height: 120px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.88) 0%, rgba(255, 255, 255, 0.68) 100%);
+            backdrop-filter: blur(18px) saturate(150%);
+            -webkit-backdrop-filter: blur(18px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 16px;
+            padding: 12px clamp(14px, 1.4vw, 22px);
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.35s ease, background 0.35s ease, border-color 0.35s ease;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.75),
+                0 1px 2px rgba(15, 23, 42, 0.04),
+                0 10px 28px rgba(15, 23, 42, 0.10);
+            width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
             justify-content: center;
             overflow: visible;
-            margin-bottom: 10px !important;
             z-index: 1;
+            container-type: inline-size;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.78) 100%);
+            border-color: rgba(255, 255, 255, 0.85);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.9),
+                0 2px 4px rgba(15, 23, 42, 0.05),
+                0 20px 44px rgba(15, 23, 42, 0.16);
         }
         .card-body {
             display: flex;
             flex-direction: column;
             justify-content: center;
             height: 100%;
+            min-width: 0;
+            padding-left: clamp(4px, 1.2cqw, 10px);
         }
         .card-title {
-            color: #333333;
+            color: #0f172a;
             margin: 0;
-            font-size: 1.2em;
-            font-weight: bold;
+            font-size: clamp(0.85em, 1.35vw, 1.25em);
+            font-weight: 700;
+            letter-spacing: 0.01em;
             overflow: hidden;
             text-overflow: ellipsis;
             display: -webkit-box;
-            -webkit-line-clamp: 2;
+            -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             text-align: left;
             padding-left: 5px;
-            width: calc(100% - 2em);
+            padding-right: calc(clamp(28px, 14cqw, 46px) + 12px);
+            width: 100%;
             word-break: break-all;
         }
         .card-actions {
             position: absolute;
-            right: 10px;
+            right: clamp(5px, 3cqw, 14px);
             top: 50%;
             transform: translateY(-50%);
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: clamp(3px, 1.5cqw, 8px);
             z-index: 2;
         }
         .info-icon, .copy-btn {
-            background-color: rgba(255, 255, 255, 0.9);
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 5px;
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            border-radius: clamp(6px, 2.5cqw, 11px);
             cursor: pointer;
-            font-size: 1.2em;
-            color: #333;
-            width: 40px;
-            height: 40px;
+            color: #475569;
+            width: 30px;
+            height: 30px;
+            width: clamp(28px, 14cqw, 46px);
+            height: clamp(28px, 14cqw, 46px);
+            font-size: 13px;
+            font-size: clamp(11px, 7cqw, 20px);
+            padding: 0;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+            transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .info-icon:hover, .copy-btn:hover {
+            background: #0f172a;
+            color: #ffffff;
+            border-color: #0f172a;
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.28);
+            transform: scale(1.06);
+        }
+        .info-icon:active, .copy-btn:active {
+            transform: scale(0.96);
         }
         .empty-card {
             opacity: 0;
@@ -299,17 +359,53 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
         .full-info {
             display: none;
             position: fixed;
-            background-color: rgba(255, 255, 255, 0.95);
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            border-radius: 5px;
-            width: 100%;
-            max-width: 300px;
-            min-width: 200px;
-            word-wrap: break-word;
-            font-size: 12px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0.88) 100%);
+            backdrop-filter: blur(20px) saturate(150%);
+            -webkit-backdrop-filter: blur(20px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 16px;
+            padding: 16px 18px;
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                0 16px 44px rgba(15, 23, 42, 0.22);
+            width: max-content;
+            max-width: min(560px, calc(100vw - 24px));
+            min-width: 220px;
+            font-size: 12.5px;
+            line-height: 1.7;
+            color: #334155;
             z-index: 99999;
-            transition: top 0.3s, left 0.3s;
+            transition: top 0.25s ease, left 0.25s ease;
+        }
+        .full-info p {
+            margin: 0 0 6px;
+        }
+        .full-info p:last-child {
+            margin-bottom: 0;
+        }
+        .full-info strong {
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .full-info a {
+            color: #4f46e5;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .full-info a:hover {
+            text-decoration: underline;
+        }
+        .full-info pre {
+            margin: 8px 0 0;
+            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.05);
+            border: 1px solid rgba(15, 23, 42, 0.07);
+            border-radius: 10px;
+            max-width: 100%;
+            overflow-x: auto;
+            font-size: 11.5px;
+            line-height: 1.6;
+            color: #1e293b;
         }
         .copy-alert {
             position: fixed;
@@ -326,57 +422,64 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
             pointer-events: none;
         }
         .pagination {
-            position: fixed;
-            bottom: 80px;
-            left: 0;
-            width: 100%;
+            position: relative;
+            flex: 0 0 auto;
             display: flex;
             justify-content: center;
+            margin: 0 0 clamp(8px, 1.6vh, 18px);
             z-index: 1000;
         }
         .pagination-indicators {
             display: flex;
             gap: 10px;
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 10px 20px;
+            background-color: rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 8px 18px;
             border-radius: 20px;
         }
         .indicator {
             width: 20px;
             height: 4px;
-            background-color: rgba(255, 255, 255, 0.5);
+            background-color: rgba(255, 255, 255, 0.4);
+            border-radius: 2px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
+        .indicator:hover {
+            background-color: rgba(255, 255, 255, 0.7);
+        }
         .indicator.active {
-            background-color: #2575fc;
-            transform: scale(1.2);
+            background-color: #ffffff;
         }
         @media (max-width: 767px) {
             .ip-counter {
                 display: none;
             }
-            .col-md-3 {
-                width: 50%;
+            .page-title {
+                margin: 0 56px;
             }
-            .card-container {
-                margin-top: 20px;
-                overflow: visible;
+            body {
+                height: auto;
+                min-height: 100vh;
+                overflow: auto;
             }
             #pages {
-                height: calc(100vh - 60px);
+                flex: 1 1 auto;
+                overflow: visible;
             }
             .page {
                 height: auto;
+                padding: 10px;
             }
-            .row {
-                margin-bottom: 0 !important;
-            }
-            body {
-                overflow: auto;
+            .card-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-auto-rows: minmax(96px, auto);
+                height: auto;
             }
             .card {
-                height: 100px;
+                height: 96px;
             }
             .full-info {
                 width: 90%;
@@ -385,6 +488,7 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
             .header {
                 display: flex;
                 align-items: center;
+                padding: 12px 10px;
             }
             .page-title {
                 flex-grow: 1;
@@ -401,12 +505,29 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
                 border-radius: 5px;
             }
         }
+        /* 中等屏幕自动减少列数，避免卡片过窄 */
+        @media (min-width: 768px) and (max-width: 991px) {
+            .card-grid {
+                grid-template-columns: repeat(<?php echo max(2, min((int)$cols, 3)); ?>, minmax(0, 1fr));
+            }
+        }
+        /* 超宽屏适度限制内容宽度，保证卡片不过分拉伸 */
+        @media (min-width: 1800px) {
+            .page {
+                padding-left: max(40px, calc((100vw - 1760px) / 2));
+                padding-right: max(40px, calc((100vw - 1760px) / 2));
+            }
+        }
     </style>
 </head>
 <body>
     <!-- 头部 -->
     <div class="header">
-        <div class="ip-counter">本站累计访问IP：<?php echo $ips; ?></div>
+        <div class="ip-counter">
+            <span class="ip-dot"></span>
+            <span class="ip-label">累计访问 IP</span>
+            <span class="ip-value"><?php echo $ips; ?></span>
+        </div>
         <div class="page-title"><?php echo htmlspecialchars($maintitle); ?></div>
         <a href="login.php" class="login-btn"><img src="logbt.png" alt="Login"></a>
     </div>
@@ -419,36 +540,35 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
                     <?php
                     $start = $page * $perPage;
                     $end = min($start + $perPage, $totalCards);
-                    for ($row = 0; $row < ceil($perPage / ($isMobile ? 2 : 4)); $row++): ?>
-                        <div class="row">
-                            <?php for ($col = 0; $col < ($isMobile ? 2 : 4); $col++):
-                                $i = $start + $row * ($isMobile ? 2 : 4) + $col;
-                                if ($i < $end):
-                                    $card = $cards[$i];
-                                ?>
-                                    <div class="col-md-3 col-6">
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <h5 class="card-title"><?php echo htmlspecialchars($card['cardtext']); ?></h5>
-                                                <div class="card-actions">
-                                                    <button class="info-icon" data-fullinfo="#full-info-<?php echo $i; ?>" data-row="<?php echo $row + 1; ?>" data-col="<?php echo $col + 1; ?>">
-                                                        <i class="fas fa-info-circle"></i>
-                                                    </button>
-                                                    <button class="copy-btn" data-clipboard-text="<?php echo htmlspecialchars($card['cardscript']); ?>">
-                                                        <i class="fas fa-copy"></i>
-                                                    </button>
-                                                </div>
+                    ?>
+                    <div class="card-grid">
+                        <?php for ($idx = 0; $idx < $perPage; $idx++):
+                            $i = $start + $idx;
+                            if ($idx < $end - $start):
+                                $card = $cards[$i];
+                                $gridRow = intdiv($idx, 2) + 1;
+                                $gridCol = ($idx % 2) + 1;
+                            ?>
+                                <div class="card-cell">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h5 class="card-title"><?php echo htmlspecialchars($card['cardtext']); ?></h5>
+                                            <div class="card-actions">
+                                                <button class="info-icon" data-fullinfo="#full-info-<?php echo $i; ?>" data-row="<?php echo $gridRow; ?>" data-col="<?php echo $gridCol; ?>">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </button>
+                                                <button class="copy-btn" data-clipboard-text="<?php echo htmlspecialchars($card['cardscript']); ?>">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
-                                <?php else: ?>
-                                    <div class="col-md-3 col-6">
-                                        <div class="card empty-card"></div>
-                                    </div>
-                                <?php endif; ?>
-                            <?php endfor; ?>
-                        </div>
-                    <?php endfor; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="card-cell"><div class="card empty-card"></div></div>
+                            <?php endif; ?>
+                        <?php endfor; ?>
+                    </div>
                 </div>
             </div>
         <?php endfor; ?>
@@ -489,26 +609,107 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
     <!-- Bootstrap 5 JS 和 jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.6/clipboard.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // 初始化 ClipboardJS
-            new ClipboardJS('.copy-btn').on('success', function(e) {
+            // 复制命令（原生 clipboard API，不触发 copy 事件）
+            // 单一定时器：重复复制时清除上一个隐藏定时器，避免新提示被提前藏掉
+            var copyAlertHideTimer = null;
+
+            function showCopyAlert(text, ok) {
                 var alertBox = document.querySelector('.copy-alert');
-                alertBox.textContent = '一键命令复制成功: ' + e.text;
+                if (!alertBox) return;
+
+                if (copyAlertHideTimer) {
+                    clearTimeout(copyAlertHideTimer);
+                    copyAlertHideTimer = null;
+                }
+
+                // 重新显示时不做淡入过渡，直接出现
+                alertBox.style.transition = 'none';
+                alertBox.textContent = ok ? ('一键命令复制成功: ' + text) : '复制失败，请手动选择命令后按 Ctrl+C 复制';
                 alertBox.style.display = 'block';
-                setTimeout(function() {
+                alertBox.style.opacity = 1;
+                void alertBox.offsetWidth; // 强制回流，使上面的样式立即生效
+                alertBox.style.transition = 'opacity 0.3s';
+
+                copyAlertHideTimer = setTimeout(function() {
                     alertBox.style.opacity = 0;
                     setTimeout(function() {
                         alertBox.style.display = 'none';
-                        alertBox.style.opacity = 1;
                     }, 300);
+                    copyAlertHideTimer = null;
                 }, 3000);
+            }
+
+            function fallbackCopy(text) {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                var ok = false;
+                try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+                document.body.removeChild(ta);
+                showCopyAlert(text, ok);
+            }
+
+            // 复制主路径：优先走 ClipboardItem 写入（部分浏览器安全扩展会拦截
+            // clipboard.writeText / execCommand 两条旧通道，ClipboardItem 不受影响）
+            function copyText(text) {
+                try {
+                    if (navigator.clipboard && typeof navigator.clipboard.write === 'function' && typeof ClipboardItem === 'function') {
+                        var item = new ClipboardItem({
+                            'text/plain': new Blob([text], { type: 'text/plain' })
+                        });
+                        return navigator.clipboard.write([item]).then(function() {
+                            return true;
+                        }, function() {
+                            return false;
+                        });
+                    }
+                } catch (e) { /* 继续降级 */ }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    return navigator.clipboard.writeText(text).then(function() {
+                        return true;
+                    }, function() {
+                        return false;
+                    });
+                }
+                return Promise.resolve(false);
+            }
+
+            document.querySelectorAll('.copy-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var text = btn.getAttribute('data-clipboard-text') || '';
+                    if (!text) { showCopyAlert('', false); return; }
+                    copyText(text).then(function(ok) {
+                        if (ok) {
+                            showCopyAlert(text, true);
+                        } else {
+                            fallbackCopy(text);
+                        }
+                    });
+                });
             });
 
             // 浮窗显示逻辑
+            // display:none 时 offsetWidth/Height 为 0，先临时显示以测量真实尺寸
+            function measureFullInfo(el) {
+                var prevDisplay = el.style.display;
+                var prevVisibility = el.style.visibility;
+                el.style.visibility = 'hidden';
+                el.style.display = 'block';
+                var w = el.offsetWidth;
+                var h = el.offsetHeight;
+                el.style.visibility = prevVisibility;
+                el.style.display = prevDisplay;
+                return { width: w, height: h };
+            }
+
             function calculatePopupPosition(buttonRect, floatWidth, floatHeight, row, col, isMobile) {
                 let top, left;
+                const margin = 10;
 
                 // 计算按钮的中心点
                 const centerX = buttonRect.left + buttonRect.width / 2;
@@ -523,21 +724,24 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
                     left -= buttonRect.width * 0.6; // 向左平移60%卡片宽度
                 }
 
-                // 检查是否超出屏幕左侧
-                if (left < 0) {
-                    left = 0;
+                // 限制在可视区域内（含 10px 边距）
+                if (left < margin) {
+                    left = margin;
                 }
-                // 检查是否超出屏幕右侧
-                if (left + floatWidth > window.innerWidth) {
-                    left = window.innerWidth - floatWidth;
+                if (left + floatWidth > window.innerWidth - margin) {
+                    left = window.innerWidth - margin - floatWidth;
                 }
-                // 检查是否超出屏幕顶部
-                if (top < 0) {
-                    top = 0;
+                if (left < margin) {
+                    left = margin;
                 }
-                // 检查是否超出屏幕底部
-                if (top + floatHeight > window.innerHeight) {
-                    top = window.innerHeight - floatHeight;
+                if (top < margin) {
+                    top = margin;
+                }
+                if (top + floatHeight > window.innerHeight - margin) {
+                    top = window.innerHeight - margin - floatHeight;
+                }
+                if (top < margin) {
+                    top = margin;
                 }
 
                 return { top, left };
@@ -551,10 +755,9 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
 
                 icon.addEventListener('mouseenter', function() {
                     var iconRect = icon.getBoundingClientRect();
-                    var floatWidth = fullInfo.offsetWidth;
-                    var floatHeight = fullInfo.offsetHeight;
+                    var size = measureFullInfo(fullInfo);
                     var isMobile = <?php echo $isMobile ? 'true' : 'false'; ?>; // 判断是否为手机端
-                    var position = calculatePopupPosition(iconRect, floatWidth, floatHeight, row, col, isMobile);
+                    var position = calculatePopupPosition(iconRect, size.width, size.height, row, col, isMobile);
                     fullInfo.style.top = position.top + 'px';
                     fullInfo.style.left = position.left + 'px';
                     fullInfo.style.display = 'block';
@@ -576,13 +779,12 @@ $totalPages = ceil($totalCards / $perPage); // 总页数
                 // 手机端触摸显示浮窗
                 icon.addEventListener('touchstart', function(e) {
                     e.preventDefault();
-                    fullInfo.style.display = 'block';
                     var iconRect = icon.getBoundingClientRect();
-                    var floatWidth = fullInfo.offsetWidth;
-                    var floatHeight = fullInfo.offsetHeight;
-                    var position = calculatePopupPosition(iconRect, floatWidth, floatHeight, row, col, true);
+                    var size = measureFullInfo(fullInfo);
+                    var position = calculatePopupPosition(iconRect, size.width, size.height, row, col, true);
                     fullInfo.style.top = position.top + 'px';
                     fullInfo.style.left = position.left + 'px';
+                    fullInfo.style.display = 'block';
                 });
 
                 icon.addEventListener('touchend', function() {

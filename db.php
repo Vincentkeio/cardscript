@@ -194,4 +194,26 @@ if ($result->num_rows > 0) {
     // 如果 stats 表中没有数据，插入初始记录
     $conn->query("INSERT INTO stats (ips) VALUES (0)");
 }
+
+// 检查 cards 表中是否有数据，如果没有则导入默认卡片（全新安装即有内容）
+$result = $conn->query("SELECT COUNT(*) AS count FROM cards");
+if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    if ($row['count'] == 0) {
+        $seedFile = __DIR__ . '/cards_seed.sql';
+        if (is_file($seedFile)) {
+            // 使用 multi_query 由服务端解析整段 SQL（命令文本中可能含有分号）
+            try {
+                $seedSql = file_get_contents($seedFile);
+                if ($conn->multi_query($seedSql)) {
+                    while ($conn->more_results() && $conn->next_result()) {
+                        // 逐条消费结果集
+                    }
+                }
+            } catch (mysqli_sql_exception $e) {
+                // 种子导入失败不阻断安装流程
+            }
+        }
+    }
+}
 ?>
